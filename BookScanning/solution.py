@@ -7,6 +7,19 @@
 #           Fabien Sailliet             #
 #                                       #
 #########################################
+# Achieves a score of 16 million. The best score at the moment is 27 mil (there's room for improvement)
+
+# Change target to select input and output files
+target = 0
+
+if not 0 <= target < 6:
+    print("Target must be between 0 and 5")
+    exit()
+
+
+inputs = ["a_example.txt", "b_read_on.txt", "c_incunabula.txt",
+          "d_tough_choices.txt", "e_so_many_books.txt", "f_libraries_of_the_world.txt"]
+outputs = ["a.txt", "b.txt", "c.txt", "d.txt", "e.txt", "f.txt"]
 
 
 def find_best_book(list_of_books, books_to_scan):
@@ -77,17 +90,16 @@ def main():
         num_lib += 1
 
     result = str(num_lib) + "\n" + result
-    with open("output4.txt", 'w') as output_file:
+    with open(outputs[target], 'w') as output_file:
         output_file.write(result)
 
 
 if __name__ == "__main__":
-    with open("e_so_many_books.txt", 'r') as file_text:
+    with open(inputs[target], 'r') as file_text:
         splits = list(map(int, file_text.readline().split()))
         num_books, num_libraries, num_days = splits
         book_scores = list(map(int, file_text.readline().split()))
 
-        # 2D list. Each entry describes a library: books, signup and books per day
         libraries_details = []
         for _ in range(num_libraries):
             splits = [int(s) for s in file_text.readline().split()]
