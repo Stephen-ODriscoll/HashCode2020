@@ -1,6 +1,7 @@
 """
 Author: Stephen O Driscoll
 """
+# Achieves maximum score for all test cases
 # The best way I can describe this algorithm is brute force with an upper limit.
 
 # A dictionary of all possible combinations of pizzas is created, where the key for this dictionary
