@@ -74,42 +74,51 @@ int main(int argc, char* argv[])
     for (uint32_t i = 0; i < numLibraries; ++i)
     {
         std::getline(input, line);
-        auto splits = split(line, ' ');
+        splits = split(line, ' ');
+
         uint32_t numSignUpDays = splits[1], numBooksPerDay = splits[2];
-
         std::getline(input, line);
-        std::vector<uint32_t> bookList = split(line, ' ');
 
-        libraries.push_back(Library(i, numSignUpDays, numBooksPerDay, bookList));
+        libraries.push_back(Library(i, numSignUpDays, numBooksPerDay, split(line, ' ')));
     }
 
     input.close();
 
     uint32_t totalScore = 0;
-    uint32_t numLibrariesUsed = 0;
     std::string solution = "";
+    uint32_t numLibrariesUsed = 0;
     for (; 0 < g_numDaysLeft && !libraries.empty(); ++numLibrariesUsed)
     {
         std::sort(libraries.begin(), libraries.end());
         auto library = libraries.end() - 1;
 
-        const auto &books = library->getBooksAndScore();
+        // Validate the score isn't 0
+        if (library->getScore() == 0)
+        {
+            break;
+        }
+
+        // Add to solution
+        const auto &books = library->getBooksUsed();
         solution += std::to_string(library->getIndex()) + " " + std::to_string(books.size()) + "\n";
         for (const auto& book : books)
         {
-            solution += std::to_string(book.first) + " ";
+            solution += std::to_string(book) + " ";
         }
         solution += "\n";
 
+        // Update total and days left
         totalScore += library->getScore();
-        g_numDaysLeft = (g_numDaysLeft < library->getNumSignUpDays()) ? 0 : g_numDaysLeft - library->getNumSignUpDays();
+        g_numDaysLeft -= library->getNumSignUpDays();
 
+        // Update other library scores
         for (auto it = libraries.begin(); it < (libraries.end() - 1); ++it)
         {
             it->update(books);
         }
 
-        std::cout << "Days Left: " << g_numDaysLeft << std::endl;
+        // Erase it
+        std::cout << "Days Left: " << g_numDaysLeft <<  std::endl;
         libraries.erase(library);
     }
 

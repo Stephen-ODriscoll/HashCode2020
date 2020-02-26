@@ -17,8 +17,8 @@ if not 0 <= target < 6:
     exit()
 
 
-inputs = ["a_example.txt", "b_read_on.txt", "c_incunabula.txt",
-          "d_tough_choices.txt", "e_so_many_books.txt", "f_libraries_of_the_world.txt"]
+inputs = ["../a_example.txt", "../b_read_on.txt", "../c_incunabula.txt",
+          "../d_tough_choices.txt", "../e_so_many_books.txt", "../f_libraries_of_the_world.txt"]
 outputs = ["a.txt", "b.txt", "c.txt", "d.txt", "e.txt", "f.txt"]
 
 
@@ -55,8 +55,7 @@ def main():
     libraries_scores = dict()
     for i, lib in enumerate(libraries_details):
         lib_score, scores_per_books = evaluate_library(num_days, set(range(num_books)), lib)
-        libraries_scores[(lib_score / lib["register_days"], i)] = [scores_per_books, lib["register_days"],
-                                                                   lib["books_per_day"], lib_score]
+        libraries_scores[(lib_score, i)] = [scores_per_books, lib["register_days"], lib["books_per_day"]]
 
     print("Processing...")
     total_score = 0
@@ -64,7 +63,7 @@ def main():
     while 0 < num_days_left and libraries_scores:
         # Pick the best library
         best_score_and_index = max(libraries_scores)
-        total_score += libraries_scores[best_score_and_index][3]
+        total_score += best_score_and_index[0]
 
         result += str(best_score_and_index[1]) + " " + str(len(libraries_scores[best_score_and_index][0])) + "\n"
         result += ' '.join(map(str, [i[1] for i in libraries_scores[best_score_and_index][0]])) + "\n"
@@ -77,7 +76,7 @@ def main():
                 new_score = key[0]
                 if score_per_book in libraries_scores[key][0]:
                     libraries_scores[key][0].remove(score_per_book)
-                    new_score = (libraries_scores[key][3] - score_per_book[0] / libraries_scores[key][1])
+                    new_score -= score_per_book[0]
 
                 set_length = len(libraries_scores[key][0])
                 # (num days left - days to register) * books per day
