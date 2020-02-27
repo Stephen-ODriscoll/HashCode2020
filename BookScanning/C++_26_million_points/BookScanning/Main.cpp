@@ -84,48 +84,83 @@ int main(int argc, char* argv[])
 
     input.close();
 
-    uint32_t totalScore = 0;
-    std::string solution = "";
-    uint32_t numLibrariesUsed = 0;
-    for (; 0 < g_numDaysLeft && !libraries.empty(); ++numLibrariesUsed)
-    {
-        std::sort(libraries.begin(), libraries.end());
-        auto library = libraries.end() - 1;
+    uint32_t bestScore = 0, totalScore = 0;
+    std::vector<Library> bestLibrariesUsed, librariesUsed;
 
-        // Validate the score isn't 0
-        if (library->getScore() == 0)
+    bool done = false;
+    uint32_t backTrackingLimit = 5;
+    std::vector<uint32_t> counters(libraries.size(), 0);
+    for (uint32_t i = 0; i < backTrackingLimit && !done; ++i)
+    {
+        while (0 < g_numDaysLeft && !libraries.empty())
         {
-            break;
+            std::sort(libraries.begin(), libraries.end());
+            const auto library = (libraries.end() - 1) - counters[librariesUsed.size()];
+
+            // Validate the score isn't 0
+            if (library->getScore() == 0)
+            {
+                break;
+            }
+
+            // Update total, days left and other libraries
+            totalScore += library->getScore();
+            g_numDaysLeft -= library->getNumSignUpDays();
+            for (auto it = libraries.begin(); it < (libraries.end() - 1); ++it)
+            {
+                it->update(library->getBooksUsed());
+            }
+            librariesUsed.push_back(*library);
+            libraries.erase(library);
+
+            std::cout << "Days Left: " << g_numDaysLeft << std::endl;
         }
 
-        // Add to solution
-        const auto &books = library->getBooksUsed();
-        solution += std::to_string(library->getIndex()) + " " + std::to_string(books.size()) + "\n";
+        if (bestScore < totalScore)
+        {
+            bestScore = totalScore;
+            bestLibrariesUsed = librariesUsed;
+        }
+        
+        // Backtracking
+        do
+        {
+            counters[librariesUsed.size()] = 0;
+
+            if (librariesUsed.empty())
+            {
+                done = true;
+                break;
+            }
+
+            const auto library = librariesUsed.end() - 1;
+            totalScore -= library->getScore();
+            g_numDaysLeft += library->getNumSignUpDays();
+            libraries.push_back(*library);
+            librariesUsed.erase(library);
+
+            ++counters[librariesUsed.size()];
+        }
+        while (libraries.size() < counters[librariesUsed.size()]);
+    }
+
+    std::cout << "Best Score: " << bestScore << std::endl;
+
+    // Convert libraries used to string for output
+    std::string solution = "";
+    for (const auto& bestLibrary : bestLibrariesUsed)
+    {
+        const auto& books = bestLibrary.getBooksUsed();
+        solution += std::to_string(bestLibrary.getIndex()) + " " + std::to_string(books.size()) + "\n";
         for (const auto& book : books)
         {
             solution += std::to_string(book) + " ";
         }
         solution += "\n";
-
-        // Update total and days left
-        totalScore += library->getScore();
-        g_numDaysLeft -= library->getNumSignUpDays();
-
-        // Update other library scores
-        for (auto it = libraries.begin(); it < (libraries.end() - 1); ++it)
-        {
-            it->update(books);
-        }
-
-        // Erase it
-        std::cout << "Days Left: " << g_numDaysLeft <<  std::endl;
-        libraries.erase(library);
     }
 
-    std::cout << "Total Score: " << totalScore << std::endl;
-
     std::ofstream output(outputs[target]);
-    output << numLibrariesUsed << "\n";
+    output << bestLibrariesUsed.size() << "\n";
     output << solution;
     output.close();
 }
