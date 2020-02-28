@@ -88,9 +88,9 @@ int main(int argc, char* argv[])
     std::vector<Library> bestLibrariesUsed, librariesUsed;
 
     bool done = false;
-    uint32_t backTrackingLimit = 5;
-    std::vector<uint32_t> counters(libraries.size(), 0);
-    for (uint32_t i = 0; i < backTrackingLimit && !done; ++i)
+    uint32_t backTrackingLimit = 5000;
+    std::vector<uint32_t> counters(libraries.size() + 1, 0);
+    for (uint32_t i = 0; i < backTrackingLimit && counters[0] < libraries.size() - 1; ++i)
     {
         while (0 < g_numDaysLeft && !libraries.empty())
         {
@@ -127,15 +127,15 @@ int main(int argc, char* argv[])
         {
             counters[librariesUsed.size()] = 0;
 
-            if (librariesUsed.empty())
-            {
-                done = true;
-                break;
-            }
-
             const auto library = librariesUsed.end() - 1;
             totalScore -= library->getScore();
             g_numDaysLeft += library->getNumSignUpDays();
+
+            for (auto it = libraries.begin(); it < libraries.end(); ++it)
+            {
+                it->backtrack(library->getBooksUsed());
+            }
+
             libraries.push_back(*library);
             librariesUsed.erase(library);
 
