@@ -85,12 +85,12 @@ int main(int argc, char* argv[])
     input.close();
 
     uint32_t totalScore = 0;
-    std::string solution = "";
-    uint32_t numLibrariesUsed = 0;
-    for (; 0 < g_numDaysLeft && !libraries.empty(); ++numLibrariesUsed)
+    std::vector<Library> librariesUsed;
+
+    while (0 < g_numDaysLeft && !libraries.empty())
     {
         std::sort(libraries.begin(), libraries.end());
-        auto library = libraries.end() - 1;
+        const auto library = (libraries.end() - 1);
 
         // Validate the score isn't 0
         if (library->getScore() == 0)
@@ -98,34 +98,36 @@ int main(int argc, char* argv[])
             break;
         }
 
-        // Add to solution
-        const auto &books = library->getBooksUsed();
-        solution += std::to_string(library->getIndex()) + " " + std::to_string(books.size()) + "\n";
+        // Update total, days left and other libraries
+        totalScore += library->getScore();
+        g_numDaysLeft -= library->getNumSignUpDays();
+        for (auto it = libraries.begin(); it < (libraries.end() - 1); ++it)
+        {
+            it->updateUnusableBooks(library->getBooksUsed());
+        }
+        librariesUsed.push_back(*library);
+        libraries.erase(library);
+
+        std::cout << "Days Left: " << g_numDaysLeft << std::endl;
+    }
+
+    std::cout << "Total Score: " << totalScore << std::endl;
+
+    // Convert libraries used to string for output
+    std::string solution = "";
+    for (const auto& libraryUsed : librariesUsed)
+    {
+        const auto& books = libraryUsed.getBooksUsed();
+        solution += std::to_string(libraryUsed.getIndex()) + " " + std::to_string(books.size()) + "\n";
         for (const auto& book : books)
         {
             solution += std::to_string(book) + " ";
         }
         solution += "\n";
-
-        // Update total and days left
-        totalScore += library->getScore();
-        g_numDaysLeft -= library->getNumSignUpDays();
-
-        // Update other library scores
-        for (auto it = libraries.begin(); it < (libraries.end() - 1); ++it)
-        {
-            it->update(books);
-        }
-
-        // Erase it
-        std::cout << "Days Left: " << g_numDaysLeft <<  std::endl;
-        libraries.erase(library);
     }
 
-    std::cout << "Total Score: " << totalScore << std::endl;
-
     std::ofstream output(outputs[target]);
-    output << numLibrariesUsed << "\n";
+    output << librariesUsed.size() << "\n";
     output << solution;
     output.close();
 }
