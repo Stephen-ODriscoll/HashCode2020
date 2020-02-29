@@ -36,12 +36,11 @@ public:
         m_numBooksPerDay(numBooksPerDay),
         m_usableBooks(bookList.begin(), bookList.end())
     {
-        calculateActualScore();
-        m_score = m_actualScore / m_numSignUpDays;
+        calculateScore();
     }
 
 
-    void update(const std::vector<uint32_t> &unusableBooks)
+    void updateUnusableBooks(const std::vector<uint32_t> &unusableBooks)
     {
         for (const auto &unusableBook : unusableBooks)
         {
@@ -53,12 +52,11 @@ public:
             }
         }
 
-        calculateActualScore();
-        m_score = m_actualScore / m_numSignUpDays;
+        calculateScore();
     }
 
 
-    void backtrack(const std::vector<uint32_t>& usableBooks)
+    void updateUsableBooks(const std::vector<uint32_t>& usableBooks)
     {
         for (const auto& usableBook : usableBooks)
         {
@@ -70,12 +68,11 @@ public:
             }
         }
 
-        calculateActualScore();
-        m_score = m_actualScore / m_numSignUpDays;
+        calculateScore();
     }
 
 
-    void calculateActualScore()
+    void calculateScore()
     {
         m_actualScore = 0;
         m_booksUsed.clear();
@@ -87,6 +84,8 @@ public:
             m_actualScore += g_bookScores[*(--it)];
             m_booksUsed.push_back(*it);
         }
+
+        m_score = m_actualScore / m_numSignUpDays;
     }
 
 
