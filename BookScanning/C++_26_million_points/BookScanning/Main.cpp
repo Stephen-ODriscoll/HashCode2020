@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <set>
+#include <map>
 
 #include "Globals.h"
 #include "Library.h"
@@ -83,10 +84,9 @@ int main(int argc, char* argv[])
     }
 
     input.close();
+    g_bookStatus = std::vector<std::pair<bool, uint32_t>>(g_bookScores.size(), std::make_pair(false, 0));
 
     uint32_t totalScore = 0;
-    std::vector<Library> librariesUsed;
-
     while (0 < g_numDaysLeft && !libraries.empty())
     {
         std::sort(libraries.begin(), libraries.end());
@@ -98,24 +98,33 @@ int main(int argc, char* argv[])
             break;
         }
 
+        // Update which library is scanning which book
+        const auto libraryIndex = library->getIndex();
+        const auto &booksUsed = library->getBooksUsed();
+        for (const auto bookUsed : booksUsed)
+        {
+            g_bookStatus[bookUsed] = std::make_pair(true, libraryIndex);
+        }
+
         // Update total, days left and other libraries
         totalScore += library->getScore();
         g_numDaysLeft -= library->getNumSignUpDays();
         for (auto it = libraries.begin(); it < (libraries.end() - 1); ++it)
         {
-            it->updateUnusableBooks(library->getBooksUsed());
+            it->updateBooks(booksUsed);
         }
-        librariesUsed.push_back(*library);
+        insertSortByIndex(*library);
         libraries.erase(library);
 
         std::cout << "Days Left: " << g_numDaysLeft << std::endl;
     }
 
+    std::sort(g_librariesUsed.begin(), g_librariesUsed.end());
     std::cout << "Total Score: " << totalScore << std::endl;
 
     // Convert libraries used to string for output
     std::string solution = "";
-    for (const auto& libraryUsed : librariesUsed)
+    for (const auto& libraryUsed : g_librariesUsed)
     {
         const auto& books = libraryUsed.getBooksUsed();
         solution += std::to_string(libraryUsed.getIndex()) + " " + std::to_string(books.size()) + "\n";
@@ -127,7 +136,7 @@ int main(int argc, char* argv[])
     }
 
     std::ofstream output(outputs[target]);
-    output << librariesUsed.size() << "\n";
+    output << g_librariesUsed.size() << "\n";
     output << solution;
     output.close();
 }

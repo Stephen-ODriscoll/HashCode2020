@@ -21,7 +21,8 @@ class Library
     uint32_t m_numSignUpDays;
     uint32_t m_numBooksPerDay;
 
-    std::set<uint32_t, compareBooks> m_usableBooks;
+    std::set<uint32_t, compareBooks> m_books;
+    std::set<uint32_t, compareBooks>::iterator m_nextBestIt;
     std::set<uint32_t> m_unusableBooks;
     std::vector<uint32_t> m_booksUsed;
 
@@ -34,37 +35,19 @@ public:
         m_myIndex(myIndex),
         m_numSignUpDays(numSignUpDays),
         m_numBooksPerDay(numBooksPerDay),
-        m_usableBooks(bookList.begin(), bookList.end())
+        m_books(bookList.begin(), bookList.end())
     {
         calculateScore();
     }
 
 
-    void updateUnusableBooks(const std::vector<uint32_t> &unusableBooks)
+    void updateBooks(const std::vector<uint32_t> &books)
     {
-        for (const auto &unusableBook : unusableBooks)
+        for (const auto &book : books)
         {
-            auto it = m_usableBooks.find(unusableBook);
-            if (it != m_usableBooks.end())
+            if (m_books.find(book) != m_books.end())
             {
-                m_usableBooks.erase(it);
-                m_unusableBooks.insert(unusableBook);
-            }
-        }
-
-        calculateScore();
-    }
-
-
-    void updateUsableBooks(const std::vector<uint32_t>& usableBooks)
-    {
-        for (const auto& usableBook : usableBooks)
-        {
-            auto it = m_unusableBooks.find(usableBook);
-            if (it != m_unusableBooks.end())
-            {
-                m_unusableBooks.erase(it);
-                m_usableBooks.insert(usableBook);
+                m_unusableBooks.insert(book);
             }
         }
 
@@ -76,15 +59,44 @@ public:
     {
         m_actualScore = 0;
         m_booksUsed.clear();
+        std::map<uint32_t, uint32_t> libraryCounters;
 
-        auto it = m_usableBooks.end();
+        auto it = m_books.end();
         uint32_t numBooksScanned = (m_numSignUpDays < g_numDaysLeft) ? (g_numDaysLeft - m_numSignUpDays) * m_numBooksPerDay : 0;
-        for (uint32_t i = 0; i < numBooksScanned && it != m_usableBooks.begin(); ++i)
+        for (uint32_t i = 0; i < numBooksScanned && it != m_books.begin();)
         {
-            m_actualScore += g_bookScores[*(--it)];
-            m_booksUsed.push_back(*it);
+            if (m_unusableBooks.find(*(--it)) == m_unusableBooks.end())
+            {
+                m_actualScore += g_bookScores[*it];
+                m_booksUsed.push_back(*it);
+                ++i;
+            }
+            else
+            {
+                // Check if the library scanning the book will let another library scan a better book
+                const auto libraryIndex = g_bookStatus[*it].second;
+                if (libraryCounters.find(libraryIndex) == libraryCounters.end())
+                {
+                    libraryCounters[libraryIndex] = 0;
+                }
+                else
+                {
+                    ++libraryCounters[libraryIndex];
+                }
+
+                uint32_t otherLibraryScore = g_bookScores[g_librariesUsed[libraryIndex].getNextBestBook(libraryCounters[libraryIndex])];
+
+                auto it2 = it;
+                while (it2 != m_books.begin() && m_unusableBooks.find(*(--it2)) != m_unusableBooks.end()) {}
+
+                if (it2 != m_books.end() && )
+                {
+
+                }
+            }
         }
 
+        m_nextBestIt == --it;
         m_score = m_actualScore / m_numSignUpDays;
     }
 
@@ -109,6 +121,17 @@ public:
         return m_booksUsed;
     }
 
+    const uint32_t getNextBestBook(uint32_t nextBestCount) const
+    {
+        auto nextBestItCopy = m_nextBestIt;
+        for (uint32_t i = 0; i < nextBestCount; ++i)
+        {
+            --nextBestItCopy;
+        }
+
+        return *nextBestItCopy;
+    }
+
 
     bool operator<(const Library &rhs) const
     {
@@ -121,7 +144,7 @@ public:
         m_numSignUpDays = rhs.m_numSignUpDays;
         m_numBooksPerDay = rhs.m_numBooksPerDay;
 
-        m_usableBooks = rhs.m_usableBooks;
+        m_books = rhs.m_books;
         m_unusableBooks = rhs.m_unusableBooks;
         m_booksUsed = rhs.m_booksUsed;
 
