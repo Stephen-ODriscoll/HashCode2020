@@ -90,41 +90,59 @@ int main(int argc, char* argv[])
     while (0 < g_numDaysLeft && !libraries.empty())
     {
         std::sort(libraries.begin(), libraries.end());
-        const auto library = (libraries.end() - 1);
+        const auto plibrary = (libraries.end() - 1);
+        const auto library = *plibrary;
+        g_librariesUsed[library.getIndex()] = library;
+        libraries.erase(plibrary);
 
         // Validate the score isn't 0
-        if (library->getScore() == 0)
+        if (library.getScore() == 0)
         {
             break;
         }
 
         // Update which library is scanning which book
-        const auto libraryIndex = library->getIndex();
-        const auto &booksUsed = library->getBooksUsed();
+        const auto libraryIndex = library.getIndex();
+        const auto &booksUsed = library.getBooksUsed();
         for (const auto bookUsed : booksUsed)
         {
             g_bookStatus[bookUsed] = std::make_pair(true, libraryIndex);
         }
 
+        // Update changes to other libraries already chosen
+        std::set<uint32_t> otherBooksUsed;
+        const auto& otherLibraryChanges = library.getOtherLibraryChanges();
+        for (const auto& libraryChange : otherLibraryChanges)
+        {
+            g_librariesUsed[libraryChange[0]].updateBooksUsed(libraryChange[1], libraryChange[2]);
+            g_bookStatus[libraryChange[2]] = std::make_pair(true, libraryChange[0]);
+            otherBooksUsed.insert(libraryChange[2]);
+        }
+
         // Update total, days left and other libraries
-        totalScore += library->getScore();
-        g_numDaysLeft -= library->getNumSignUpDays();
-        for (auto it = libraries.begin(); it < (libraries.end() - 1); ++it)
+        totalScore += library.getScore();
+        g_numDaysLeft -= library.getNumSignUpDays();
+        for (auto it = libraries.begin(); it < libraries.end(); ++it)
         {
             it->updateBooks(booksUsed);
+            it->updateBooks(otherBooksUsed);
         }
-        insertSortByIndex(*library);
-        libraries.erase(library);
 
         std::cout << "Days Left: " << g_numDaysLeft << std::endl;
     }
 
-    std::sort(g_librariesUsed.begin(), g_librariesUsed.end());
+    std::vector<Library> librariesUsed;
+    for (const auto& libraryUsed : g_librariesUsed)
+    {
+        librariesUsed.push_back(libraryUsed.second);
+    }
+
+    std::sort(librariesUsed.begin(), librariesUsed.end());
     std::cout << "Total Score: " << totalScore << std::endl;
 
     // Convert libraries used to string for output
     std::string solution = "";
-    for (const auto& libraryUsed : g_librariesUsed)
+    for (const auto& libraryUsed : librariesUsed)
     {
         const auto& books = libraryUsed.getBooksUsed();
         solution += std::to_string(libraryUsed.getIndex()) + " " + std::to_string(books.size()) + "\n";
@@ -136,7 +154,7 @@ int main(int argc, char* argv[])
     }
 
     std::ofstream output(outputs[target]);
-    output << g_librariesUsed.size() << "\n";
+    output << librariesUsed.size() << "\n";
     output << solution;
     output.close();
 }

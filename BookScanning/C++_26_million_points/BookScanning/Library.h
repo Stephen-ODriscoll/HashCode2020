@@ -2,7 +2,6 @@
 
 #include "Globals.h"
 
-
 class Library
 {
     struct compareBooks {
@@ -22,9 +21,11 @@ class Library
     uint32_t m_numBooksPerDay;
 
     std::set<uint32_t, compareBooks> m_books;
-    std::set<uint32_t, compareBooks>::iterator m_nextBestIt;
     std::set<uint32_t> m_unusableBooks;
-    std::vector<uint32_t> m_booksUsed;
+    std::set<uint32_t> m_booksUsed;
+
+    std::vector<std::vector<uint32_t>> m_otherLibraryChanges;    // Library index with it's old book and new book to scan
+    std::set<uint32_t, compareBooks>::iterator m_nextBestIt;                        // Iterator to the next best book to be used
 
     uint32_t m_score = 0;
     uint32_t m_actualScore = 0;
@@ -40,8 +41,13 @@ public:
         calculateScore();
     }
 
+    Library()
+    {
 
-    void updateBooks(const std::vector<uint32_t> &books)
+    }
+
+
+    void updateBooks(const std::set<uint32_t> &books)
     {
         for (const auto &book : books)
         {
@@ -59,6 +65,7 @@ public:
     {
         m_actualScore = 0;
         m_booksUsed.clear();
+        m_otherLibraryChanges.clear();
         std::map<uint32_t, uint32_t> libraryCounters;
 
         auto it = m_books.end();
@@ -68,13 +75,19 @@ public:
             if (m_unusableBooks.find(*(--it)) == m_unusableBooks.end())
             {
                 m_actualScore += g_bookScores[*it];
-                m_booksUsed.push_back(*it);
+                m_booksUsed.insert(*it);
                 ++i;
             }
             else
             {
-                // Check if the library scanning the book will let another library scan a better book
-                const auto libraryIndex = g_bookStatus[*it].second;
+                // Check if this library scanning the book will let another library scan a better book
+                auto it2 = it;
+                if (!g_bookStatus[*it2].first)
+                {
+                    continue;
+                }
+
+                const auto libraryIndex = g_bookStatus[*it2].second;
                 if (libraryCounters.find(libraryIndex) == libraryCounters.end())
                 {
                     libraryCounters[libraryIndex] = 0;
@@ -84,19 +97,42 @@ public:
                     ++libraryCounters[libraryIndex];
                 }
 
-                uint32_t otherLibraryScore = g_bookScores[g_librariesUsed[libraryIndex].getNextBestBook(libraryCounters[libraryIndex])];
-
-                auto it2 = it;
-                while (it2 != m_books.begin() && m_unusableBooks.find(*(--it2)) != m_unusableBooks.end()) {}
-
-                if (it2 != m_books.end() && )
+                bool found = false;
+                while (it2 != m_books.begin())
                 {
+                    if (m_unusableBooks.find(*(--it2)) != m_unusableBooks.end())
+                    {
+                        found = true;
+                        break;
+                    }
+                }
 
+                const std::pair<bool, uint32_t> otherLibrary = g_librariesUsed[libraryIndex].getNextBestBook(libraryCounters[libraryIndex]);
+
+                if (!found || !otherLibrary.first)
+                {
+                    continue;
+                }
+
+                if (g_bookScores[*it2] < g_bookScores[otherLibrary.second])
+                {
+                    m_otherLibraryChanges.push_back(std::vector<uint32_t>{libraryIndex, *it, otherLibrary.second});
+                    m_actualScore += g_bookScores[otherLibrary.second];
+                    m_booksUsed.insert(*it);
+                    ++i;
                 }
             }
         }
 
-        m_nextBestIt == --it;
+        if (it == m_books.begin())
+        {
+            m_nextBestIt = it;
+        }
+        else
+        {
+            m_nextBestIt = --it;
+        }
+        
         m_score = m_actualScore / m_numSignUpDays;
     }
 
@@ -116,20 +152,41 @@ public:
         return m_actualScore;
     }
 
-    const std::vector<uint32_t> getBooksUsed() const
+    const std::set<uint32_t> getBooksUsed() const
     {
         return m_booksUsed;
     }
 
-    const uint32_t getNextBestBook(uint32_t nextBestCount) const
+    const std::vector<std::vector<uint32_t>> getOtherLibraryChanges() const
+    {
+        return m_otherLibraryChanges;
+    }
+
+    const std::pair<bool, uint32_t> getNextBestBook(uint32_t nextBestCount) const
     {
         auto nextBestItCopy = m_nextBestIt;
+        if (nextBestItCopy == m_books.begin())
+        {
+            return std::make_pair(false, 0);
+        }
+
         for (uint32_t i = 0; i < nextBestCount; ++i)
         {
+            if (nextBestItCopy == m_books.begin())
+            {
+                return std::make_pair(false, 0);
+            }
+
             --nextBestItCopy;
         }
 
-        return *nextBestItCopy;
+        return std::make_pair(true, *nextBestItCopy);
+    }
+
+    void updateBooksUsed(uint32_t oldBook, uint32_t newBook)
+    {
+        m_booksUsed.erase(m_booksUsed.find(oldBook));
+        m_booksUsed.insert(newBook);
     }
 
 
@@ -147,6 +204,9 @@ public:
         m_books = rhs.m_books;
         m_unusableBooks = rhs.m_unusableBooks;
         m_booksUsed = rhs.m_booksUsed;
+
+        m_nextBestIt = rhs.m_nextBestIt;
+        m_otherLibraryChanges = rhs.m_otherLibraryChanges;
 
         m_score = rhs.m_score;
         m_actualScore = rhs.m_actualScore;
