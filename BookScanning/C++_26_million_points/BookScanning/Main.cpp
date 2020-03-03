@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <set>
+#include <map>
 
 #include "Globals.h"
 #include "Library.h"
@@ -68,6 +69,7 @@ int main(int argc, char* argv[])
 
     std::getline(input, line);
     g_bookScores = split(line, ' ');
+    g_bookStatus = std::vector<std::pair<bool, uint32_t>>(g_bookScores.size(), std::make_pair(true, 0));
 
     std::cout << "Calculating Initial Scores" << std::endl;
     std::vector<Library> libraries;
@@ -85,32 +87,58 @@ int main(int argc, char* argv[])
     input.close();
 
     uint32_t totalScore = 0;
-    std::vector<Library> librariesUsed;
-
     while (0 < g_numDaysLeft && !libraries.empty())
     {
+        // Choose the best library (based on score)
         std::sort(libraries.begin(), libraries.end());
-        const auto library = (libraries.end() - 1);
+        const auto plibrary = (libraries.end() - 1);
 
         // Validate the score isn't 0
-        if (library->getScore() == 0)
+        if (plibrary->getScore() == 0)
         {
             break;
         }
+        
+        // Insert this library
+        g_librariesUsed.insert(std::map<uint32_t, Library>::value_type(plibrary->getIndex(), *plibrary));
 
-        // Update total, days left and other libraries
-        totalScore += library->getScore();
-        g_numDaysLeft -= library->getNumSignUpDays();
-        for (auto it = libraries.begin(); it < (libraries.end() - 1); ++it)
+        // Update all books scanned by the chosen library
+        const auto libraryIndex = plibrary->getIndex();
+        for (const auto bookUsed : plibrary->getBooksUsed())
         {
-            it->updateUnusableBooks(library->getBooksUsed());
+            g_bookStatus[bookUsed] = std::make_pair(false, libraryIndex);
         }
-        librariesUsed.push_back(*library);
-        libraries.erase(library);
+
+        // Update changes to other libraries already chosen
+        for (const auto& libraryChange : plibrary->getOtherLibraryChanges())
+        {
+            // libraryChange is a pair of index and old book (the library returns it's choice of new book)
+            const auto newBook = g_librariesUsed.find(libraryChange.first)->second.chooseNewBook(libraryChange.second);
+            g_bookStatus[newBook] = std::make_pair(false, libraryChange.first);
+        }
+
+        // Update total, days left and erase the library so it can't be chosen again
+        totalScore += plibrary->getScore();
+        g_numDaysLeft -= plibrary->getNumSignUpDays();
+        libraries.erase(plibrary);
+
+        // Update scores
+        for (auto &library : libraries)
+        {
+            library.updateScore();
+        }
 
         std::cout << "Days Left: " << g_numDaysLeft << std::endl;
     }
 
+    std::vector<Library> librariesUsed;
+    for (const auto& libraryUsed : g_librariesUsed)
+    {
+        librariesUsed.push_back(libraryUsed.second);
+    }
+
+    std::sort(librariesUsed.begin(), librariesUsed.end());
+    std::reverse(librariesUsed.begin(), librariesUsed.end());
     std::cout << "Total Score: " << totalScore << std::endl;
 
     // Convert libraries used to string for output
