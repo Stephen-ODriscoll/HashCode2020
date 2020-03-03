@@ -6,7 +6,7 @@
 class Library
 {
     struct compareBooks {
-        bool operator() (const uint32_t &lhs, const uint32_t &rhs) const
+        bool operator() (const uint64_t &lhs, const uint64_t &rhs) const
         {
             if (g_bookScores[lhs] == g_bookScores[rhs])
             {
@@ -17,22 +17,22 @@ class Library
         }
     };
 
-    uint32_t m_myIndex;
-    uint32_t m_numSignUpDays;
-    uint32_t m_numBooksPerDay;
+    uint64_t m_myIndex;
+    uint64_t m_numSignUpDays;
+    uint64_t m_numBooksPerDay;
 
-    std::set<uint32_t, compareBooks> m_books;
-    std::set<uint32_t> m_booksUsed;
+    std::set<uint64_t, compareBooks> m_books;
+    std::set<uint64_t> m_booksUsed;
 
-    uint32_t m_lastBookUsed;                                            // The lowest scoring book that made the cut
-    std::vector<std::pair<uint32_t, uint32_t>> m_otherLibraryChanges;   // Library index with it's old book that's no longer scanned
+    uint64_t m_lastBookUsed;                                            // The lowest scoring book that made the cut
+    std::vector<std::pair<uint64_t, uint64_t>> m_otherLibraryChanges;   // Library index with it's old book that's no longer scanned
 
-    uint32_t m_score = 0;
-    uint32_t m_actualScore = 0;
+    uint64_t m_score = 0;
+    uint64_t m_actualScore = 0;
 
 
 public:
-    Library(const uint32_t myIndex, const uint32_t numSignUpDays, const uint32_t numBooksPerDay, const std::vector<uint32_t> &bookList) :
+    Library(const uint64_t myIndex, const uint64_t numSignUpDays, const uint64_t numBooksPerDay, const std::vector<uint64_t> &bookList) :
         m_myIndex(myIndex),
         m_numSignUpDays(numSignUpDays),
         m_numBooksPerDay(numBooksPerDay),
@@ -47,10 +47,10 @@ public:
         m_actualScore = 0;
         m_booksUsed.clear();
         m_otherLibraryChanges.clear();
-        std::map<uint32_t, uint32_t> libraryCounters;
+        std::map<uint64_t, uint64_t> libraryCounters;
 
         auto it = m_books.end();
-        uint32_t numBooksScanned = (m_numSignUpDays < g_numDaysLeft) ? (g_numDaysLeft - m_numSignUpDays) * m_numBooksPerDay : 0;
+        uint64_t numBooksScanned = (m_numSignUpDays < g_numDaysLeft) ? (g_numDaysLeft - m_numSignUpDays) * m_numBooksPerDay : 0;
         while (it != m_books.begin() && m_booksUsed.size() < numBooksScanned)
         {
             const auto bookStatus = g_bookStatus[*(--it)];
@@ -80,7 +80,7 @@ public:
                 }
 
                 // Find next best book for the other library
-                const std::pair<bool, uint32_t> otherLibrary = g_librariesUsed.find(bookStatus.second)->second.getNextBestBook(libraryCounters[bookStatus.second]);
+                const std::pair<bool, uint64_t> otherLibrary = g_librariesUsed.find(bookStatus.second)->second.getNextBestBook(libraryCounters[bookStatus.second]);
 
                 // If either library doesn't have a "next best" then we're done
                 if (!found || !otherLibrary.first)
@@ -105,35 +105,35 @@ public:
     }
 
 
-    const uint32_t getNumSignUpDays() const
+    const uint64_t getNumSignUpDays() const
     {
         return m_numSignUpDays;
     }
 
-    const uint32_t getIndex() const
+    const uint64_t getIndex() const
     {
         return m_myIndex;
     }
 
-    const uint32_t getScore() const
+    const uint64_t getScore() const
     {
         return m_actualScore;
     }
 
-    const std::set<uint32_t> getBooksUsed() const
+    const std::set<uint64_t> getBooksUsed() const
     {
         return m_booksUsed;
     }
 
-    const std::vector<std::pair<uint32_t, uint32_t>> getOtherLibraryChanges() const
+    const std::vector<std::pair<uint64_t, uint64_t>> getOtherLibraryChanges() const
     {
         return m_otherLibraryChanges;
     }
 
-    const std::pair<bool, uint32_t> getNextBestBook(const uint32_t nextBestCount) const
+    const std::pair<bool, uint64_t> getNextBestBook(const uint64_t nextBestCount) const
     {
         auto it = m_books.find(m_lastBookUsed);
-        for (uint32_t i = 0; i < (nextBestCount + 1);)
+        for (uint64_t i = 0; i < (nextBestCount + 1);)
         {
             if (it == m_books.begin())
             {
@@ -148,7 +148,7 @@ public:
         return std::make_pair(true, *it);
     }
 
-    const uint32_t chooseNewBook(uint32_t oldBook)
+    const uint64_t chooseNewBook(uint64_t oldBook)
     {
         const auto nextBestBook = getNextBestBook(0);
 

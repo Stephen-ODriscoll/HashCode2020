@@ -9,9 +9,9 @@
 #include "Globals.h"
 #include "Library.h"
 
-std::vector<uint32_t> split(const std::string& str, wchar_t delim)
+std::vector<uint64_t> split(const std::string& str, wchar_t delim)
 {
-    std::vector<uint32_t> result;
+    std::vector<uint64_t> result;
     size_t last = 0, next = 0;
     for (; next < str.length(); ++next)
     {
@@ -64,21 +64,21 @@ int main(int argc, char* argv[])
     std::string line;
     std::getline(input, line);
     auto splits = split(line, ' ');
-    uint32_t numLibraries = splits[1], numDays = splits[2];
+    uint64_t numLibraries = splits[1], numDays = splits[2];
     g_numDaysLeft = numDays;
 
     std::getline(input, line);
     g_bookScores = split(line, ' ');
-    g_bookStatus = std::vector<std::pair<bool, uint32_t>>(g_bookScores.size(), std::make_pair(true, 0));
+    g_bookStatus = std::vector<std::pair<bool, uint64_t>>(g_bookScores.size(), std::make_pair(true, 0));
 
     std::cout << "Calculating Initial Scores" << std::endl;
     std::vector<Library> libraries;
-    for (uint32_t i = 0; i < numLibraries; ++i)
+    for (uint64_t i = 0; i < numLibraries; ++i)
     {
         std::getline(input, line);
         splits = split(line, ' ');
 
-        uint32_t numSignUpDays = splits[1], numBooksPerDay = splits[2];
+        uint64_t numSignUpDays = splits[1], numBooksPerDay = splits[2];
         std::getline(input, line);
 
         libraries.push_back(Library(i, numSignUpDays, numBooksPerDay, split(line, ' ')));
@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
 
     input.close();
 
-    uint32_t totalScore = 0;
+    uint64_t totalScore = 0;
     while (0 < g_numDaysLeft && !libraries.empty())
     {
         // Choose the best library (based on score)
@@ -100,7 +100,7 @@ int main(int argc, char* argv[])
         }
         
         // Insert this library
-        g_librariesUsed.insert(std::map<uint32_t, Library>::value_type(plibrary->getIndex(), *plibrary));
+        g_librariesUsed.insert(std::map<uint64_t, Library>::value_type(plibrary->getIndex(), *plibrary));
 
         // Update all books scanned by the chosen library
         const auto libraryIndex = plibrary->getIndex();
@@ -122,13 +122,13 @@ int main(int argc, char* argv[])
         g_numDaysLeft -= plibrary->getNumSignUpDays();
         libraries.erase(plibrary);
 
+        std::cout << "Days Left: " << g_numDaysLeft << std::endl;
+
         // Update scores
         for (auto &library : libraries)
         {
             library.updateScore();
         }
-
-        std::cout << "Days Left: " << g_numDaysLeft << std::endl;
     }
 
     std::vector<Library> librariesUsed;
